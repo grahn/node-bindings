@@ -84,7 +84,9 @@ function bindings(opts) {
 
     // Filename is undefined when eval() was used to execute code with bindings in it. We don't have a valid
     // module-root in that case and need to use a heuristic to hopefully find the correct directory.
-    if (!fileName) {
+    // Also, if the directory component of fileName is not found in module_root, we want to search for
+    // the correct directory.
+    if (!fileName || (module_root.search(dirname(fileName)) === -1)) {
       // Derive module_root from ".node"-filename
       const possible_package_name = opts.bindings.replace('.node', '');
       let best_score = -1;
@@ -234,6 +236,16 @@ exports.getFileName = function getFileName(calling_file) {
 exports.getRoot = function getRoot(file) {
   var dir = dirname(file),
     prev;
+
+  // Check if we're running from an asar archive, and if so, search
+  // the app.asar.unpacked directory for the node bindings
+  if (__dirname.split(path.sep).pop() === 'app.asar') {
+    var dirComponents = __dirname.split(path.sep)
+    dirComponents.pop()
+    dirComponents.push('app.asar.unpacked')
+    dir = dirComponents.join(path.sep)
+  }
+
   while (true) {
     if (dir === '.') {
       // Avoids an infinite loop in rare cases, like the REPL
